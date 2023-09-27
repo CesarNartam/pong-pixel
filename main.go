@@ -16,7 +16,7 @@ import (
 const (
 	width        = 800
 	height       = 600
-	gameDuration = time.Minute
+	gameDuration = time.Minute / 2
 )
 
 var (
@@ -25,7 +25,7 @@ var (
 	player1         = pixel.Rect{Min: pixel.V(10, height/2-50), Max: pixel.V(20, height/2+50)}
 	player2         = pixel.Rect{Min: pixel.V(width-20, height/2-50), Max: pixel.V(width-10, height/2+50)}
 	ball            = pixel.V(width/2, height/2)
-	ballSpeed       = pixel.V(500, 500)
+	ballSpeed       = pixel.V(400, 400)
 	player1Speed    = 700.0
 	player2Speed    = 700.0
 	gameStartTime   = time.Now()
@@ -115,7 +115,7 @@ func updateScore() {
 func resetGame() {
 	// Restablecer la posición de la pelota y el temporizador
 	ball = pixel.V(width/2, height/2)
-	gameStartTime = time.Now()
+	//gameStartTime = time.Now()
 }
 
 func run() {
