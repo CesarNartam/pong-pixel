@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image/color"
+	"pong-inverso-pixel/models"
 	"sync"
 	"time"
 
@@ -16,14 +17,15 @@ import (
 const (
 	width        = 800
 	height       = 600
-	gameDuration = time.Minute / 2
+	gameDuration = time.Minute
 )
 
 var (
-	score1          = 0
-	score2          = 0
-	player1         = pixel.Rect{Min: pixel.V(10, height/2-50), Max: pixel.V(20, height/2+50)}
-	player2         = pixel.Rect{Min: pixel.V(width-20, height/2-50), Max: pixel.V(width-10, height/2+50)}
+	score1  = 0
+	score2  = 0
+	player1 = models.NewPlayer(pixel.Rect{Min: pixel.V(10, height/2-50), Max: pixel.V(20, height/2+50)})
+	player2 = pixel.Rect{Min: pixel.V(width-20, height/2-50), Max: pixel.V(width-10, height/2+50)}
+	// ball = models.NewBall(pixel.V(width/2, height/2), pixel.V(400, 400))
 	ball            = pixel.V(width/2, height/2)
 	ballSpeed       = pixel.V(400, 400)
 	player1Speed    = 700.0
@@ -42,10 +44,10 @@ var (
 
 func movePlayer1(win *pixelgl.Window) {
 	for !gameOver {
-		if win.Pressed(pixelgl.KeyW) && player1.Max.Y < height {
+		if win.Pressed(pixelgl.KeyW) && player1.Body.Max.Y < height {
 			player1MoveCh <- player1Speed
 		}
-		if win.Pressed(pixelgl.KeyS) && player1.Min.Y > 0 {
+		if win.Pressed(pixelgl.KeyS) && player1.Body.Min.Y > 0 {
 			player1MoveCh <- -player1Speed
 		}
 	}
@@ -66,11 +68,12 @@ func updateBall() {
 	for !gameOver {
 		dt := time.Since(last).Seconds()
 		last = time.Now()
+		// ball = ball.Update(ball.Body.Add(ball.Speed.Scaled(dt)))
 		ball = ball.Add(ballSpeed.Scaled(dt))
 
-		if ball.X < player1.Max.X && ball.Y >= player1.Min.Y && ball.Y <= player1.Max.Y {
+		if ball.X < player1.Body.Max.X && ball.Y >= player1.Body.Min.Y && ball.Y <= player1.Body.Max.Y {
 			ballSpeed.X = -ballSpeed.X
-			relativePos := (ball.Y - player1.Min.Y) / (player1.Max.Y - player1.Min.Y)
+			relativePos := (ball.Y - player1.Body.Min.Y) / (player1.Body.Max.Y - player1.Body.Min.Y)
 			ballSpeed.Y = (relativePos - 0.5) * 800
 		}
 
@@ -90,32 +93,24 @@ func updateBall() {
 
 func updateScore() {
 	for !gameOver {
-		// Verificar si la pelota salió de la pantalla a la izquierda
 		if ball.X < 0 {
-			// Punto para el jugador 2
 			score2++
 			resetGame()
 		}
 
-		// Verificar si la pelota salió de la pantalla a la derecha
 		if ball.X > width {
-			// Punto para el jugador 1
 			score1++
 			resetGame()
 		}
 
-		// Actualizar el temporizador de tiempo transcurrido
 		gameTimeElapsed = time.Since(gameStartTime)
 
-		// Esperar un tiempo antes de la próxima actualización
 		time.Sleep(time.Millisecond * 10)
 	}
 }
 
 func resetGame() {
-	// Restablecer la posición de la pelota y el temporizador
 	ball = pixel.V(width/2, height/2)
-	//gameStartTime = time.Now()
 }
 
 func run() {
@@ -127,7 +122,7 @@ func run() {
 	if err != nil {
 		panic(err)
 	}
-	// Iniciar goroutines para el movimiento de jugadores y actualización de la pelota.
+
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
@@ -142,25 +137,23 @@ func run() {
 	go updateScore()
 
 	for !win.Closed() {
-		// Lógica de comunicación con las goroutines
 		select {
 		case player1Speed := <-player1MoveCh:
-			// Actualiza la posición del jugador 1
 			dt := time.Since(last).Seconds()
 			last = time.Now()
-			player1.Min.Y += player1Speed * dt
-			player1.Max.Y += player1Speed * dt
+			player1.Body.Min.Y += player1Speed * dt
+			player1.Body.Max.Y += player1Speed * dt
+
 		case player2Speed := <-player2MoveCh:
-			// Actualiza la posición del jugador 2
 			dt := time.Since(last).Seconds()
 			last = time.Now()
 			player2.Min.Y += player2Speed * dt
 			player2.Max.Y += player2Speed * dt
+
 		case <-gameOverCh:
-			// El juego ha terminado
 			gameOver = true
 		default:
-			// No se recibieron acciones, continuar
+
 		}
 
 		win.Clear(color.RGBA{R: 0, G: 0, B: 0, A: 255})
@@ -168,7 +161,7 @@ func run() {
 		imd := imdraw.New(nil)
 		imd.Color = color.RGBA{R: 255, G: 255, B: 255, A: 255}
 
-		imd.Push(player1.Min, player1.Max)
+		imd.Push(player1.Body.Min, player1.Body.Max)
 		imd.Rectangle(0)
 
 		imd.Push(player2.Min, player2.Max)
@@ -217,7 +210,6 @@ func run() {
 		}
 	}
 
-	// Cerrar goroutines antes de salir
 	close(player1MoveCh)
 	close(player2MoveCh)
 	wg.Wait()
